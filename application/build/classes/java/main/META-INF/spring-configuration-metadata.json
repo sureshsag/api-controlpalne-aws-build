@@ -1,0 +1,192 @@
+{
+  "groups": [
+    {
+      "name": "apicp",
+      "type": "com.softwareag.controlplane.agent.aws.configuration.AgentProperties",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AgentProperties"
+    },
+    {
+      "name": "apicp.control-plane",
+      "type": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.runtime",
+      "type": "com.softwareag.controlplane.agent.aws.configuration.RuntimeProperties",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.RuntimeProperties"
+    },
+    {
+      "name": "aws",
+      "type": "com.softwareag.controlplane.agent.aws.configuration.AWSProperties",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AWSProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "apicp.assets-sync-interval-seconds",
+      "type": "java.lang.Integer",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AgentProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "apicp.control-plane.key-alias",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.control-plane.key-password",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.control-plane.key-store-password",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.control-plane.key-store-path",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.control-plane.key-store-type",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.control-plane.password",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.control-plane.ssl-enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties",
+      "defaultValue": false
+    },
+    {
+      "name": "apicp.control-plane.trust-store-password",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.control-plane.trust-store-path",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.control-plane.trust-store-type",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.control-plane.url",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.control-plane.username",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.ControlPlaneProperties"
+    },
+    {
+      "name": "apicp.heartbeat-send-interval-seconds",
+      "type": "java.lang.Integer",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AgentProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "apicp.metrics-send-interval-seconds",
+      "type": "java.lang.Integer",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AgentProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "apicp.publish-assets",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AgentProperties",
+      "defaultValue": false
+    },
+    {
+      "name": "apicp.runtime.capacity-unit",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.RuntimeProperties"
+    },
+    {
+      "name": "apicp.runtime.capacity-value",
+      "type": "java.lang.Long",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.RuntimeProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "apicp.runtime.description",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.RuntimeProperties"
+    },
+    {
+      "name": "apicp.runtime.location",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.RuntimeProperties"
+    },
+    {
+      "name": "apicp.runtime.name",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.RuntimeProperties"
+    },
+    {
+      "name": "apicp.runtime.region",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.RuntimeProperties"
+    },
+    {
+      "name": "apicp.runtime.tags",
+      "type": "java.util.Set<java.lang.String>",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.RuntimeProperties"
+    },
+    {
+      "name": "apicp.runtime.type-id",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.RuntimeProperties"
+    },
+    {
+      "name": "apicp.send-metrics",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AgentProperties",
+      "defaultValue": false
+    },
+    {
+      "name": "apicp.sync-assets",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AgentProperties",
+      "defaultValue": false
+    },
+    {
+      "name": "aws.assets-sync-buffer-interval-seconds",
+      "type": "java.lang.Integer",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AWSProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "aws.metrics-by-data-or-statistics",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AWSProperties"
+    },
+    {
+      "name": "aws.metrics-sync-buffer-interval-seconds",
+      "type": "java.lang.Integer",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AWSProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "aws.region",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AWSProperties"
+    },
+    {
+      "name": "aws.stage",
+      "type": "java.lang.String",
+      "sourceType": "com.softwareag.controlplane.agent.aws.configuration.AWSProperties"
+    }
+  ],
+  "hints": []
+}

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CloudWatchUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">metrics-handler</a> &gt; <a href="index.source.html" class="el_package">com.softwareag.controlplane.agentaws.metrics.utils</a> &gt; <span class="el_source">CloudWatchUtil.java</span></div><h1>CloudWatchUtil.java</h1><pre class="source lang-java linenums">package com.softwareag.controlplane.agentaws.metrics.utils;
+
+import com.softwareag.controlplane.agentaws.metrics.constants.Constants;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDataQuery;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Util class for Cloudwatch
+ */
+public final class CloudWatchUtil {
+    private CloudWatchUtil() {
+
+    }
+
+    /**
+     * Creates a list of dimensions for querying metrics by API name and stage.
+     *
+     * @param stage The configured stage.
+     * @param apiName The API name.
+     * @return A list of dimensions, including the stage and API name.
+     */
+    public static List&lt;Dimension&gt; createDimensions(String stage, String apiName) {
+<span class="fc" id="L26">        Dimension stageDimension = Dimension.builder().name(Constants.STAGE).value(stage).build();</span>
+<span class="fc" id="L27">        Dimension apiNameDimension = Dimension.builder().name(Constants.API_NAME).value(apiName).build();</span>
+<span class="fc" id="L28">        List&lt;Dimension&gt; dimensions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L29">        dimensions.add(stageDimension);</span>
+<span class="fc" id="L30">        dimensions.add(apiNameDimension);</span>
+<span class="fc" id="L31">        return dimensions;</span>
+    }
+
+    /**
+     * Creates a list of MetricDataQuery objects for querying metrics data based on the provided dimensions and interval.
+     *
+     * @param dimensions List of dimensions, including stage and API name.
+     * @param interval The period of time over which the metrics are aggregated, in seconds.
+     * @return A list of MetricDataQuery objects, each representing a metric query.
+     */
+    public static List&lt;MetricDataQuery&gt; createMetricDataQueries(List&lt;Dimension&gt; dimensions, int interval) {
+<span class="fc" id="L42">        List&lt;MetricDataQuery&gt; metricDataQueries = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L43">        metricDataQueries.add(createMetricDataQuery(Constants.AWS_METRIC_COUNT_ID, Constants.AWS_METRIC_COUNT, dimensions,</span>
+<span class="fc" id="L44">                Constants.CLOUDWATCH_SUM_STATISTIC, interval));</span>
+<span class="fc" id="L45">        metricDataQueries.add(createMetricDataQuery(Constants.AWS_METRIC_LATENCY_ID, Constants.AWS_METRIC_LATENCY, dimensions,</span>
+<span class="fc" id="L46">                Constants.CLOUDWATCH_AVERAGE_STATISTIC, interval));</span>
+<span class="fc" id="L47">        metricDataQueries.add(createMetricDataQuery(Constants.AWS_METRIC_INTEGRATION_LATENCY_ID, Constants.AWS_METRIC_INTEGRATION_LATENCY, dimensions,</span>
+<span class="fc" id="L48">                Constants.CLOUDWATCH_AVERAGE_STATISTIC, interval));</span>
+<span class="fc" id="L49">        metricDataQueries.add(createMetricDataQuery(Constants.AWS_METRIC_CLIENT_ERROR_ID, Constants.AWS_METRIC_CLIENT_ERROR, dimensions,</span>
+<span class="fc" id="L50">                Constants.CLOUDWATCH_SUM_STATISTIC, interval));</span>
+<span class="fc" id="L51">        metricDataQueries.add(createMetricDataQuery(Constants.AWS_METRIC_SERVER_ERROR_ID, Constants.AWS_METRIC_SERVER_ERROR, dimensions,</span>
+<span class="fc" id="L52">                Constants.CLOUDWATCH_SUM_STATISTIC, interval));</span>
+<span class="fc" id="L53">        return metricDataQueries;</span>
+    }
+
+    /**
+     * Creates a MetricDataQuery object for querying specific metrics data.
+     *
+     * @param metricId The unique identifier for the metric.
+     * @param metricName The name of the metric for which MetricDataQuery should be created.
+     * @param dimensions List of dimensions, including stage and API name.
+     * @param statistic The statistic to be applied to the metric data.
+     * @param period The period of time over which the metrics are aggregated, in seconds.
+     * @return A MetricDataQuery object representing the query for the specified metric data.
+     */
+    private static MetricDataQuery createMetricDataQuery(String metricId, String metricName, List&lt;Dimension&gt; dimensions, String statistic,
+                                                         Integer period) {
+<span class="fc" id="L68">        return MetricDataQuery.builder()</span>
+<span class="fc" id="L69">                .metricStat(metStat -&gt; metStat.stat(statistic)</span>
+<span class="fc" id="L70">                        .period(period)</span>
+<span class="fc" id="L71">                        .metric(met -&gt; met.metricName(metricName).dimensions(dimensions).namespace(Constants.CLOUDWATCH_AWS_NAMESPACE)))</span>
+<span class="fc" id="L72">                .id(metricId)</span>
+<span class="fc" id="L73">                .returnData(true)</span>
+<span class="fc" id="L74">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

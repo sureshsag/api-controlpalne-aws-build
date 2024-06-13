@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.softwareag.controlplane.agentaws.assets.manager.impl.AssetsManagerImplTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2024-06-12T11:17:23" hostname="SAG-874PPX3" time="5.979">
+  <properties/>
+  <testcase name="testGetModifiedRestAPIs()" classname="com.softwareag.controlplane.agentaws.assets.manager.impl.AssetsManagerImplTest" time="5.93"/>
+  <testcase name="testGetRestAPIsWithOwnerInfo()" classname="com.softwareag.controlplane.agentaws.assets.manager.impl.AssetsManagerImplTest" time="0.028"/>
+  <testcase name="testGetRestAPIs()" classname="com.softwareag.controlplane.agentaws.assets.manager.impl.AssetsManagerImplTest" time="0.018"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

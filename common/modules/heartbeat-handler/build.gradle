@@ -1,0 +1,21 @@
+plugins {
+    id 'java-library'
+}
+apply from: '../../../settings/jacoco.gradle'
+
+dependencies {
+    api project(':common:modules:auth')
+
+    implementation fileTree(dir: '../../../libs', include: '*.jar')
+
+    implementation rootProject.agentSdk
+    implementation rootProject.commonHeartbeatHandler
+
+    testImplementation rootProject.junit
+    testImplementation rootProject.awsTestDependencies
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}

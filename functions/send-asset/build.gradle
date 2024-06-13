@@ -1,0 +1,50 @@
+plugins {
+    id 'java'
+}
+apply plugin: 'java'
+
+repositories {
+
+}
+
+dependencies {
+    implementation project(':functions:utils')
+}
+
+configurations.implementation.setCanBeResolved(true)
+
+task buildFatJar(type: Jar) {
+    archiveBaseName = "$archiveJarName"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    destinationDirectory = file('../build/libs/java/lib')
+}
+
+task buildLayerZip(type: Zip) {
+    from '../build/libs'
+    include 'java/*/*'
+    archiveFileName = "$archiveLayerName"
+    destinationDirectory = (file('../build/libs'))
+
+    doLast {
+        delete '../build/libs/java'
+        delete '../build/libs/functions.jar'
+    }
+}
+
+task buildZip(type: Zip) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    into('lib') {
+        from(jar)
+        from(configurations.runtimeClasspath)
+    }
+}
+
+buildFatJar.dependsOn ':common:modules:auth:jar'
+buildFatJar.dependsOn ':functions:utils:jar'
+buildFatJar.dependsOn ':common:modules:assets-handler:jar'
+buildFatJar.dependsOn ':common:modules:metrics-handler:jar'
+buildFatJar.dependsOn ':common:modules:heartbeat-handler:jar'
+buildLayerZip.dependsOn buildFatJar
+build.dependsOn buildLayerZip
+build.dependsOn buildZip

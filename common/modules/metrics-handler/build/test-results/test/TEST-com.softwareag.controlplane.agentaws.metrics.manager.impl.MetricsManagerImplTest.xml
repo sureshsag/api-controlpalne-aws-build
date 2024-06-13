@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.softwareag.controlplane.agentaws.metrics.manager.impl.MetricsManagerImplTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2024-06-12T11:17:51" hostname="SAG-874PPX3" time="5.777">
+  <properties/>
+  <testcase name="verifyGetMetricsByData()" classname="com.softwareag.controlplane.agentaws.metrics.manager.impl.MetricsManagerImplTest" time="5.66"/>
+  <testcase name="getMetricsByStatistics()" classname="com.softwareag.controlplane.agentaws.metrics.manager.impl.MetricsManagerImplTest" time="0.067"/>
+  <testcase name="verifyIfMetricsAreReturnedForEveryTimestampInTheDefinedInterval()" classname="com.softwareag.controlplane.agentaws.metrics.manager.impl.MetricsManagerImplTest" time="0.024"/>
+  <testcase name="verifyIfMetricsAreReturnedIfTimestampIsInvalid()" classname="com.softwareag.controlplane.agentaws.metrics.manager.impl.MetricsManagerImplTest" time="0.004"/>
+  <testcase name="verifyIfNoTransactionMetricsAreReturned()" classname="com.softwareag.controlplane.agentaws.metrics.manager.impl.MetricsManagerImplTest" time="0.014"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

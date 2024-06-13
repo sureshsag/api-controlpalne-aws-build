@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Utils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">utils</a> &gt; <a href="index.source.html" class="el_package">com.softwareag.controlplane.awslambda.util</a> &gt; <span class="el_source">Utils.java</span></div><h1>Utils.java</h1><pre class="source lang-java linenums">package com.softwareag.controlplane.awslambda.util;
+
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.softwareag.controlplane.agentaws.auth.AWSCredentialsProvider;
+import com.softwareag.controlplane.agentsdk.api.config.AuthConfig;
+import com.softwareag.controlplane.agentsdk.api.config.ControlPlaneConfig;
+import com.softwareag.controlplane.agentsdk.api.config.HttpConnectionConfig;
+import com.softwareag.controlplane.agentsdk.api.config.RuntimeConfig;
+import com.softwareag.controlplane.agentsdk.api.config.SdkConfig;
+import com.softwareag.controlplane.awslambda.util.constants.Constants;
+import com.softwareag.controlplane.awslambda.util.provider.EnvProvider;
+import com.softwareag.controlplane.agentsdk.api.client.ControlPlaneClient;
+import com.softwareag.controlplane.agentsdk.api.client.SdkClientException;
+import com.softwareag.controlplane.agentsdk.api.client.http.SdkHttpClient;
+import com.softwareag.controlplane.agentsdk.core.client.DefaultHttpClient;
+import com.softwareag.controlplane.agentsdk.core.client.RestControlPlaneClient;
+import com.softwareag.controlplane.agentsdk.core.handler.RuntimeRegistrationHandler;
+import com.softwareag.controlplane.agentsdk.core.model.RuntimeReregistrationReport;
+import com.softwareag.controlplane.agentsdk.model.Capacity;
+import com.softwareag.controlplane.agentsdk.model.Runtime;
+import org.apache.logging.log4j.Level;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.GetCallerIdentityRequest;
+import software.amazon.awssdk.services.sts.model.GetCallerIdentityResponse;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * Utilities class for Functions.
+ */
+public final class Utils {
+
+    private Utils() {
+    }
+
+    /**
+     * Creates and configures ControlPlane configuration.
+     * @return An instance of {@link ControlPlaneConfig}
+     */
+
+    public static ControlPlaneConfig getControlplaneConfig() {
+<span class="nc" id="L47">        return new ControlPlaneConfig.Builder()</span>
+<span class="nc" id="L48">                .url(EnvProvider.getEnv(Constants.APICP_URL))</span>
+<span class="nc" id="L49">                .authConfig(new AuthConfig.Builder(EnvProvider.getEnv(Constants.APICP_USERNAME),</span>
+<span class="nc" id="L50">                        EnvProvider.getEnv(Constants.APICP_PASSWORD)).build())</span>
+<span class="nc" id="L51">                .build();</span>
+    }
+
+    /**
+     * Creates and configures SdkHttpClient instance.
+     *
+     * @return An instance of {@link SdkHttpClient}.
+     */
+    public static SdkHttpClient getHttpClient() {
+<span class="nc" id="L60">        return new DefaultHttpClient.Builder()</span>
+<span class="nc" id="L61">                .connectionConfig(new HttpConnectionConfig.Builder().build())</span>
+<span class="nc" id="L62">                .build();</span>
+    }
+
+    /**
+     * Creates and configures Runtime configuration.
+     * @return An instance of {@link RuntimeConfig}.
+     */
+    public static RuntimeConfig getRuntimeConfig() {
+<span class="nc" id="L70">        String runtimeHost = String.format(&quot;https://%s.console.aws.amazon.com/apigateway&quot;, System.getenv(Constants.AWS_REGION));</span>
+<span class="nc" id="L71">        return new RuntimeConfig.Builder(getRuntimeId(), System.getenv(Constants.APICP_RUNTIME_NAME),</span>
+<span class="nc" id="L72">                System.getenv(Constants.APICP_RUNTIME_TYPE_ID), Runtime.DeploymentType.PUBLIC_CLOUD)</span>
+<span class="nc" id="L73">                .description(System.getenv(Constants.APICP_RUNTIME_DESCRIPTION))</span>
+<span class="nc" id="L74">                .region(System.getenv(Constants.APICP_RUNTIME_REGION))</span>
+<span class="nc" id="L75">                .location(System.getenv(Constants.APICP_RUNTIME_LOCATION))</span>
+<span class="nc" id="L76">                .capacity(getCapacity())</span>
+<span class="nc" id="L77">                .tags(getRuntimeTagsFromEnv())</span>
+<span class="nc" id="L78">                .host(runtimeHost)</span>
+<span class="nc" id="L79">                .build();</span>
+    }
+
+    /**
+     * Creates and configures a SdkConfig object using the provided ControlPlane configuration and runtime configuration.
+     *
+     * @param controlPlaneConfig The {@link ControlPlaneConfig} object.
+     * @param runtimeConfig      The runtime configuration object.
+     * @return An {@link SdkConfig} initialized with the provided configurations.
+     */
+    public static SdkConfig getSDKConfig(ControlPlaneConfig controlPlaneConfig, RuntimeConfig runtimeConfig) {
+<span class="nc" id="L90">        return new SdkConfig.Builder(controlPlaneConfig, runtimeConfig)</span>
+<span class="nc" id="L91">                .heartbeatInterval(Integer.parseInt(EnvProvider.getEnv(Constants.APICP_HEARTBEAT_SEND_INTERVAL_SECONDS)))</span>
+<span class="nc" id="L92">                .assetsSyncInterval(Integer.parseInt(EnvProvider.getEnv(Constants.APICP_ASSETS_SYNC_INTERVAL_SECONDS)))</span>
+<span class="nc" id="L93">                .logLevel(Level.ALL)</span>
+<span class="nc" id="L94">                .build();</span>
+    }
+
+    /**
+     * Creates and configures a ControlPlaneClient Object.
+     *
+     * @param controlPlaneConfig The {@link ControlPlaneConfig} object.
+     * @param runtimeConfig      The {@link RuntimeConfig} object.
+     * @param httpClient         The {@link SdkHttpClient} object.
+     * @return {@link ControlPlaneClient} A client which communicates to Control Plane APIs.
+     */
+    public static ControlPlaneClient getControlplaneClient(ControlPlaneConfig controlPlaneConfig, RuntimeConfig runtimeConfig, SdkHttpClient httpClient) {
+<span class="nc" id="L106">        return new RestControlPlaneClient.Builder()</span>
+<span class="nc" id="L107">                .controlPlaneConfig(controlPlaneConfig)</span>
+<span class="nc" id="L108">                .runtimeConfig(runtimeConfig)</span>
+<span class="nc" id="L109">                .httpClient(httpClient)</span>
+<span class="nc" id="L110">                .build();</span>
+    }
+
+    /**
+     * Creates and configures a RuntimeRegistrationHandler Object
+     *
+     * @param controlPlaneClient The ControlPlaneClient object which communicates to Control Plane APIs.
+     * @param sdkConfig          The {@link SdkConfig} object.
+     * @return {@link RuntimeRegistrationHandler} which registers the runtime to ControlPlane.
+     */
+    public static RuntimeRegistrationHandler getRuntimeRegistrationHandler(ControlPlaneClient controlPlaneClient, SdkConfig sdkConfig) {
+<span class="nc" id="L121">        return new RuntimeRegistrationHandler.Builder(</span>
+                controlPlaneClient,
+<span class="nc" id="L123">                sdkConfig.getRuntimeConfig(),</span>
+<span class="nc" id="L124">                sdkConfig.getHeartbeatInterval())</span>
+<span class="nc" id="L125">                .build();</span>
+    }
+
+
+    /**
+     * Checks if the ControlPlane is active and healthy.
+     *
+     * @param controlPlaneClient The ControlPlaneClient object which communicates to Control Plane APIs.
+     * @return {@code true} if the ControlPlane is active and healthy; {@code false} otherwise.
+     */
+    public static boolean isControlplaneActive(ControlPlaneClient controlPlaneClient) {
+        try {
+<span class="nc" id="L137">            controlPlaneClient.checkHealth();</span>
+<span class="nc" id="L138">        } catch (SdkClientException e) {</span>
+<span class="nc" id="L139">            return false;</span>
+<span class="nc" id="L140">        }</span>
+<span class="nc" id="L141">        return true;</span>
+    }
+
+    /**
+     * Generates a runtime identifier string.
+     *
+     * @return A string representing the runtime ID.
+     */
+    public static String getRuntimeId() {
+<span class="nc" id="L150">        return getAccountID().concat(&quot;-&quot;)</span>
+<span class="nc" id="L151">                .concat(EnvProvider.getEnv(Constants.AWS_REGION))</span>
+<span class="nc" id="L152">                .concat(&quot;-&quot;)</span>
+<span class="nc" id="L153">                .concat(EnvProvider.getEnv(Constants.AWS_STAGE));</span>
+    }
+
+    private static Capacity getCapacity() {
+<span class="nc" id="L157">        Capacity capacity = new Capacity();</span>
+<span class="nc" id="L158">        capacity.setUnit(Capacity.TimeUnit.valueOf(EnvProvider.getEnv(Constants.APICP_RUNTIME_CAPACITY_UNIT)));</span>
+<span class="nc" id="L159">        capacity.setValue(Long.parseLong(EnvProvider.getEnv(Constants.APICP_RUNTIME_CAPACITY_VALUE)));</span>
+<span class="nc" id="L160">        return capacity;</span>
+    }
+
+    /**
+     * Retrieves runtime tags from environment variables and constructs a HashSet of strings.
+     *
+     * @return A HashSet of strings representing the runtime tags.
+     */
+    public static Set&lt;String&gt; getRuntimeTagsFromEnv() {
+<span class="fc" id="L169">        String runtimeTagsEnv = EnvProvider.getEnv(Constants.APICP_RUNTIME_TAGS);</span>
+<span class="fc" id="L170">        String[] substrings = runtimeTagsEnv.split(&quot;,&quot;);</span>
+<span class="fc" id="L171">        return new HashSet&lt;&gt;(Arrays.asList(substrings));</span>
+    }
+
+    private static String getAccountID() {
+<span class="nc" id="L175">        StsClient stsClient = StsClient.builder()</span>
+<span class="nc" id="L176">                .region(Region.of(EnvProvider.getEnv(Constants.AWS_REGION)))</span>
+<span class="nc" id="L177">                .credentialsProvider(AWSCredentialsProvider.getCredentialsProvider())</span>
+<span class="nc" id="L178">                .build();</span>
+
+<span class="nc" id="L180">        GetCallerIdentityRequest getCallerIdentityRequest = GetCallerIdentityRequest.builder().build();</span>
+<span class="nc" id="L181">        GetCallerIdentityResponse getCallerIdentityResponse = stsClient.getCallerIdentity(getCallerIdentityRequest);</span>
+<span class="nc" id="L182">        return getCallerIdentityResponse.account();</span>
+    }
+
+    /**
+     * Retrieves the timestamp of the last synchronization action from ControlPlane.
+     *
+     * @param responseObject     The responseObject returned while registering runtime.
+     * @param actionType         The type of action for which to retrieve the sync time.
+     * @return The timestamp of the last synchronization action.
+     * @throws IOException If an error occurs during JSON deserialization.
+     */
+    public static Long getLastActionSyncTime(Object responseObject, String actionType) throws IOException {
+<span class="pc bpc" id="L194" title="1 of 2 branches missed.">        if (responseObject instanceof String response) {</span>
+<span class="fc" id="L195">            ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);</span>
+<span class="fc" id="L196">            RuntimeReregistrationReport reregistrationReport = mapper.readValue(response, RuntimeReregistrationReport.class);</span>
+<span class="fc bfc" id="L197" title="All 4 branches covered.">            switch (actionType){</span>
+                case Constants.SYNC_ASSET_ACTION -&gt; {
+<span class="fc" id="L199">                    return reregistrationReport.getLastAssetSyncTime();</span>
+                }
+                case Constants.SEND_HEARTBEAT_ACTION -&gt; {
+<span class="fc" id="L202">                    return reregistrationReport.getLastHeartbeatTime();</span>
+                }
+                case Constants.SEND_METRIC_ACTION -&gt; {
+<span class="fc" id="L205">                    return reregistrationReport.getLastMetricsTime();</span>
+                }
+                default -&gt; {
+<span class="fc" id="L208">                    return null;</span>
+                }
+            }
+        }
+<span class="nc" id="L212">        return null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,19 @@
+String.metaClass.toProjectName  = { -> projectNameConverter(delegate)   }
+
+rootProject.name = 'agentaws'
+
+/* Helper methods */
+/* My string converter implementations */
+def projectNameConverter( orig) {
+    orig.replaceAll('(is-?|spm-?|cce-?|cmp-?|mws-?|bas-sd-?|^)(.*)', '$1-' + rootProject.name + '-$2').replaceAll('^-|-$','').replaceAll('--','-')
+}
+
+include 'common:modules:assets-handler'
+include 'common:modules:metrics-handler'
+include 'common:modules:heartbeat-handler'
+include 'common:modules:auth'
+include 'application'
+include 'functions:send-asset'
+include 'functions:send-heartbeat'
+include 'functions:send-metrics'
+include 'functions:utils'

@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>APIModelConverter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assets-handler</a> &gt; <a href="index.source.html" class="el_package">com.softwareag.controlplane.agentaws.assets.utils</a> &gt; <span class="el_source">APIModelConverter.java</span></div><h1>APIModelConverter.java</h1><pre class="source lang-java linenums">package com.softwareag.controlplane.agentaws.assets.utils;
+
+import com.softwareag.controlplane.agentaws.assets.constants.Constants;
+import com.softwareag.controlplane.agentsdk.model.API;
+import com.softwareag.controlplane.agentsdk.model.Owner;
+import com.softwareag.controlplane.agentsdk.model.Status;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import software.amazon.awssdk.services.apigateway.model.Deployment;
+import software.amazon.awssdk.services.apigateway.model.Stage;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * API Model converter to convert AWS API Gateway model to Agent SDK API model
+ */
+public final class APIModelConverter {
+    private APIModelConverter() {
+
+    }
+
+    /**
+     * Converts the provided parameters into an Agent SDK API model.
+     *
+     * @param apiId           The REST API ID.
+     * @param tags            The tags at the parent REST API level.
+     * @param stage           The stage of the API matching the configured stage.
+     * @param openAPISpecJson The exported API definition from a stage in JSON format.
+     * @param owner           The owner for the REST API ID fetched from AWS CloudTrail.
+     * @param deployment      The deployment(version) information.
+     * @return An Agent SDK API model representing the provided parameters.
+     */
+    public static API convertToAPIModel(String apiId, Map&lt;String, String&gt; tags, Stage stage,
+                                        JSONObject openAPISpecJson, String owner, Deployment deployment) {
+<span class="fc" id="L38">        return (API) new API.Builder(generateApiId(apiId, stage.deploymentId()), API.Type.REST)</span>
+<span class="fc" id="L39">                .version(stage.deploymentId())</span>
+<span class="fc" id="L40">                .versionSetId(apiId)</span>
+<span class="fc" id="L41">                .status(Status.ACTIVE)</span>
+<span class="fc" id="L42">                .policiesCount(getPoliciesCount(openAPISpecJson))</span>
+<span class="fc" id="L43">                .owner(getOwner(owner))</span>
+<span class="fc" id="L44">                .name(getApiName(openAPISpecJson))</span>
+<span class="fc" id="L45">                .description(deployment.description())</span>
+<span class="fc" id="L46">                .tags(getTagsForRestAPI(tags, stage.tags()))</span>
+<span class="fc" id="L47">                .created(stage.createdDate().toEpochMilli())</span>
+<span class="fc" id="L48">                .lastModified(stage.lastUpdatedDate().toEpochMilli())</span>
+<span class="fc" id="L49">                .build();</span>
+
+    }
+
+
+    /**
+     * Combines tags from the parent REST API level and stage level.
+     *
+     * @param apiTags   Tags at the parent REST API level.
+     * @param stageTags Tags at the stage level.
+     * @return A set of tags in the format key:value, combined from the stage and parent REST API.
+     */
+    private static Set&lt;String&gt; getTagsForRestAPI(Map&lt;String, String&gt; apiTags, Map&lt;String, String&gt; stageTags) {
+<span class="fc" id="L62">        Map&lt;String, String&gt; tags = new HashMap&lt;&gt;(apiTags);</span>
+<span class="fc" id="L63">        tags.putAll(stageTags);</span>
+<span class="fc" id="L64">        Set&lt;String&gt; tagsSet = new HashSet&lt;&gt;();</span>
+<span class="pc" id="L65">        tags.forEach((key, value) -&gt; tagsSet.add(key.concat(&quot;:&quot;).concat(value)));</span>
+<span class="fc" id="L66">        return tagsSet;</span>
+    }
+
+    /**
+     * Creates an Agent SDK Owner model using the provided username received from CloudTrail for an API.
+     *
+     * @param userName The username received from CloudTrail for an API.
+     * @return An Agent SDK Owner model representing the provided username.
+     */
+    private static Owner getOwner(String userName) {
+<span class="fc" id="L76">        Owner owner = null;</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        if (userName != null) {</span>
+<span class="fc" id="L78">            owner = new Owner();</span>
+<span class="fc" id="L79">            owner.setId(&quot;&quot;);</span>
+<span class="fc" id="L80">            owner.setName(userName);</span>
+        }
+
+<span class="fc" id="L83">        return owner;</span>
+    }
+
+    /**
+     * Calculates the number of policy statements based on the exported API definition from a stage.
+     *
+     * @param openAPISpecJson The exported API definition from a stage in JSON format.
+     * @return The number of policy statements.
+     */
+    private static int getPoliciesCount(JSONObject openAPISpecJson) {
+<span class="fc" id="L93">        int policiesCount = 0;</span>
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">        if (openAPISpecJson.has(Constants.REST_API_POLICY)) {</span>
+<span class="fc" id="L95">            policiesCount = ((JSONArray) ((JSONObject) openAPISpecJson</span>
+<span class="fc" id="L96">                    .get(Constants.REST_API_POLICY))</span>
+<span class="fc" id="L97">                    .get(Constants.REST_API_POLICY_STATEMENT)).length();</span>
+        }
+
+<span class="fc" id="L100">        return policiesCount;</span>
+    }
+
+    /**
+     * Retrieves the API name from the exported API definition obtained from a stage.
+     *
+     * @param openAPISpecJson The exported API definition from a stage in JSON format.
+     * @return The name of the API.
+     */
+    private static String getApiName(JSONObject openAPISpecJson) {
+<span class="fc" id="L110">        String name = null;</span>
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">        if (openAPISpecJson.has(Constants.OPEN_API_INFO)) {</span>
+<span class="fc" id="L112">            JSONObject info = (JSONObject) openAPISpecJson.get(Constants.OPEN_API_INFO);</span>
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">            if (info.has(Constants.OPEN_API_TITLE)) {</span>
+<span class="fc" id="L114">                name = info.get(Constants.OPEN_API_TITLE).toString();</span>
+            }
+        }
+<span class="fc" id="L117">        return name;</span>
+    }
+
+
+    /**
+     * Generates an API ID of the format &quot;apiId-deploymentId&quot; based on the provided AWS REST API ID and deployment ID.
+     *
+     * @param apiId        The AWS REST API ID.
+     * @param deploymentId The AWS deployment ID of an API.
+     * @return The generated API ID in the format &quot;apiId-deploymentId&quot;.
+     *         AWS doesn't generate a new API when a new version is created.
+     */
+    public static String generateApiId(String apiId, String deploymentId) {
+<span class="fc" id="L130">        return apiId.concat(&quot;-&quot;).concat(deploymentId);</span>
+    }
+
+
+    /**
+     * Updates the status of an API and returns the updated API.
+     *
+     * @param api         The API for which the status is to be set.
+     * @param versionId   The version ID of the API.
+     * @param description The description of the API.
+     * @param apiId       The API ID of the API.
+     * @param isActive    The status of the API.
+     * @return The updated API after setting its status.
+     */
+    public static API setApiStatus(API api, String versionId, String description,String apiId, boolean isActive) {
+<span class="nc" id="L145">        return (API) new API.Builder(apiId, api.getType())</span>
+<span class="nc" id="L146">                .version(versionId)</span>
+<span class="nc" id="L147">                .versionSetId(api.getVersionSetId())</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">                .status(isActive ? Status.ACTIVE : Status.INACTIVE)</span>
+<span class="nc" id="L149">                .policiesCount(api.getPoliciesCount())</span>
+<span class="nc" id="L150">                .owner(api.getOwner())</span>
+<span class="nc" id="L151">                .name(api.getName())</span>
+<span class="nc" id="L152">                .description(description)</span>
+<span class="nc" id="L153">                .tags(api.getTags())</span>
+<span class="nc" id="L154">                .created(api.getCreated())</span>
+<span class="nc" id="L155">                .lastModified(api.getLastModified())</span>
+<span class="nc" id="L156">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

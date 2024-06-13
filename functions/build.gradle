@@ -1,0 +1,35 @@
+/*
+ * Build requirements
+ */
+plugins {
+	id 'java'
+}
+apply plugin: 'java'
+
+repositories {
+
+}
+
+ext {
+	springVersion = '6.0.14'
+	commonDependencies = [
+			fileTree(dir: '../libs', include: '*.jar'),
+			rootProject.agentSdk,
+			rootProject.lambdaFunctions,
+
+			project(':common:modules:heartbeat-handler'),
+			project(':common:modules:metrics-handler'),
+			project(':common:modules:assets-handler'),
+	]
+	archiveJarName = 'lambda-layer'
+	archiveLayerName = 'lambda-layer.zip'
+}
+
+subprojects {
+	apply plugin: 'java'
+
+	dependencies {
+		implementation commonDependencies
+		testImplementation rootProject.junit
+	}
+}

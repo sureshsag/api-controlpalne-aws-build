@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Utility.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">metrics-handler</a> &gt; <a href="index.source.html" class="el_package">com.softwareag.controlplane.agentaws.metrics.utils</a> &gt; <span class="el_source">Utility.java</span></div><h1>Utility.java</h1><pre class="source lang-java linenums">package com.softwareag.controlplane.agentaws.metrics.utils;
+
+import java.time.Instant;
+
+/**
+ * Utility functions that can used across different functions
+ */
+public final class Utility {
+    private Utility(){
+
+    }
+
+    /**
+     * Converts the given timestamp in epoch milliseconds to an Instant.
+     *
+     * @param timestamp The timestamp in epoch milliseconds.
+     * @return An Instant representing the epoch timestamp.
+     */
+    public static Instant getInstant(long timestamp) {
+<span class="fc" id="L20">        return Instant.ofEpochMilli(timestamp);</span>
+    }
+
+    /**
+     * Aligns the given epoch timestamp with the specified interval by rounding it down to the nearest interval boundary.
+     *
+     * @param epochTimestamp The epoch timestamp to align.
+     * @param interval The interval, in seconds, to align the timestamp with.
+     * @return An Instant representing the epoch timestamp aligned with the specified interval.
+     */
+    public static Instant alignTimestampsWithInterval(long epochTimestamp, long interval) {
+<span class="fc" id="L31">        Instant timestamp = Utility.getInstant(epochTimestamp);</span>
+<span class="fc" id="L32">        long remainder = timestamp.toEpochMilli() % (interval * 1000);</span>
+<span class="fc" id="L33">        long alignedEpochTimestampMillis = ((epochTimestamp - remainder) / 1000) * 1000;</span>
+<span class="fc" id="L34">        return Instant.ofEpochMilli(alignedEpochTimestampMillis);</span>
+    }
+
+    /**
+     * Aligns the given Instant with the specified interval by rounding it down to the nearest interval boundary.
+     *
+     * @param timestamp The Instant to align.
+     * @param interval The interval, in seconds, to align the timestamp with.
+     * @return An Instant aligned with the specified interval.
+     */
+    public static Instant alignTimestampsWithInterval(Instant timestamp, long interval) {
+<span class="nc" id="L45">        long remainder = timestamp.toEpochMilli() % (interval * 1000);</span>
+<span class="nc" id="L46">        long alignedEpochTimestampMillis = timestamp.toEpochMilli() - remainder;</span>
+<span class="nc" id="L47">        return Instant.ofEpochMilli(alignedEpochTimestampMillis);</span>
+    }
+
+    /**
+     * Reduces the given epoch time by the specified number of seconds.
+     *
+     * @param epochTimeInMillis The epoch time in milliseconds.
+     * @param secondsToReduce   The number of seconds to reduce from the epoch time.
+     * @return The reduced epoch time in milliseconds.
+     */
+    public static long reduceEpochTime(long epochTimeInMillis, int secondsToReduce) {
+<span class="fc" id="L58">        long epochTimeInSeconds = epochTimeInMillis / 1000;</span>
+
+<span class="fc" id="L60">        long reducedEpochTimeInSeconds = epochTimeInSeconds - secondsToReduce;</span>
+
+<span class="fc" id="L62">        return reducedEpochTimeInSeconds * 1000;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

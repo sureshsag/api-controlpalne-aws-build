@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CloudTrailUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assets-handler</a> &gt; <a href="index.source.html" class="el_package">com.softwareag.controlplane.agentaws.assets.utils</a> &gt; <span class="el_source">CloudTrailUtil.java</span></div><h1>CloudTrailUtil.java</h1><pre class="source lang-java linenums">package com.softwareag.controlplane.agentaws.assets.utils;
+
+import com.softwareag.controlplane.agentaws.assets.constants.Constants;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Utility class for CloudTrail
+ */
+public final class CloudTrailUtil {
+    private CloudTrailUtil() {
+
+    }
+    /**
+     * Retrieves a list of API create event names under which it is recorded in AWS CloudTrail.
+     *
+     * @return A list containing the API create event names.
+     */
+    public static List&lt;String&gt; getApiCreateEvents() {
+<span class="fc" id="L21">        List&lt;String&gt; apiEvents = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L22">        apiEvents.add(Constants.CREATE_STAGE_EVENT);</span>
+<span class="fc" id="L23">        apiEvents.add(Constants.CREATE_DEPLOYMENT_EVENT);</span>
+<span class="fc" id="L24">        apiEvents.add(Constants.UPDATE_STAGE_EVENT);</span>
+<span class="fc" id="L25">        return apiEvents;</span>
+    }
+
+    /**
+     * Retrieves a list of API update event names under which it is recorded in AWS CloudTrail.
+     *
+     * @return A list containing the API update event names.
+     */
+    public static List&lt;String&gt; getApiUpdateEvents() {
+<span class="fc" id="L34">        List&lt;String&gt; apiEvents = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L35">        apiEvents.add(Constants.TAG_RESOURCE_EVENT);</span>
+<span class="fc" id="L36">        apiEvents.add(Constants.UNTAG_RESOURCE_EVENT);</span>
+<span class="fc" id="L37">        return apiEvents;</span>
+    }
+
+    /**
+     * Retrieves a list of API delete event names under which it is recorded in AWS CloudTrail.
+     *
+     * @return A list containing the API delete event names.
+     */
+    public static List&lt;String&gt; getApiDeleteEvents() {
+<span class="fc" id="L46">        List&lt;String&gt; apiEvents = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L47">        apiEvents.add(Constants.DELETE_STAGE_EVENT);</span>
+<span class="fc" id="L48">        return apiEvents;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

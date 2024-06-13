@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EnvProvider.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">utils</a> &gt; <a href="index.source.html" class="el_package">com.softwareag.controlplane.awslambda.util.provider</a> &gt; <span class="el_source">EnvProvider.java</span></div><h1>EnvProvider.java</h1><pre class="source lang-java linenums">package com.softwareag.controlplane.awslambda.util.provider;
+
+import com.softwareag.controlplane.awslambda.util.constants.Constants;
+import org.apache.commons.lang3.ObjectUtils;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Provides default values of Environment variables for FAAS.
+ */
+public final class EnvProvider {
+    private EnvProvider(){}
+
+<span class="fc" id="L15">    private static final Map&lt;String, String&gt; DEFAULT_VALUES = new HashMap&lt;&gt;();</span>
+
+    static {
+<span class="fc" id="L18">        DEFAULT_VALUES.put(Constants.AWS_METRICS_BY_DATA_OR_STATISTICS, &quot;statistics&quot;);</span>
+<span class="fc" id="L19">        DEFAULT_VALUES.put(Constants.APICP_HEARTBEAT_SEND_INTERVAL_SECONDS, &quot;60&quot;);</span>
+<span class="fc" id="L20">        DEFAULT_VALUES.put(Constants.APICP_METRICS_SEND_INTERVAL_SECONDS, &quot;60&quot;);</span>
+<span class="fc" id="L21">        DEFAULT_VALUES.put(Constants.APICP_ASSETS_SYNC_INTERVAL_SECONDS, &quot;300&quot;);</span>
+<span class="fc" id="L22">        DEFAULT_VALUES.put(Constants.AWS_METRICS_SYNC_BUFFER_INTERVAL_SECONDS, &quot;60&quot;);</span>
+<span class="fc" id="L23">        DEFAULT_VALUES.put(Constants.AWS_ASSETS_SYNC_BUFFER_INTERVAL_SECONDS, &quot;300&quot;);</span>
+<span class="fc" id="L24">        DEFAULT_VALUES.put(Constants.APICP_RUNTIME_DESCRIPTION, &quot;AWS Runtime&quot;);</span>
+<span class="fc" id="L25">        DEFAULT_VALUES.put(Constants.APICP_RUNTIME_TAGS, &quot;aws&quot;);</span>
+<span class="fc" id="L26">        DEFAULT_VALUES.put(Constants.APICP_RUNTIME_CAPACITY_VALUE, &quot;500000&quot;);</span>
+<span class="fc" id="L27">        DEFAULT_VALUES.put(Constants.APICP_RUNTIME_CAPACITY_UNIT, &quot;PER_YEAR&quot;);</span>
+<span class="fc" id="L28">    }</span>
+
+    /**
+     * Retrieves the value of the specified environment variable.
+     *
+     * @param variableName The name of the environment variable to retrieve.
+     * @return The value of the specified environment variable, or a default value if not found.
+     */
+    public static String getEnv(String variableName) {
+<span class="nc" id="L37">        String value = System.getenv(variableName);</span>
+<span class="nc bnc" id="L38" title="All 6 branches missed.">        if(variableName.equals(Constants.APICP_RUNTIME_REGION) &amp;&amp; (ObjectUtils.isEmpty(value) &amp;&amp; ObjectUtils.isNotEmpty(System.getenv(Constants.AWS_REGION)))) {</span>
+<span class="nc" id="L39">            return System.getenv(Constants.AWS_REGION);</span>
+        }
+<span class="nc bnc" id="L41" title="All 2 branches missed.">        return value != null ? value : DEFAULT_VALUES.getOrDefault(variableName, null);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

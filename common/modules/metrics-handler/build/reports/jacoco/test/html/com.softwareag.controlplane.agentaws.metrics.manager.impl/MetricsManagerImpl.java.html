@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MetricsManagerImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">metrics-handler</a> &gt; <a href="index.source.html" class="el_package">com.softwareag.controlplane.agentaws.metrics.manager.impl</a> &gt; <span class="el_source">MetricsManagerImpl.java</span></div><h1>MetricsManagerImpl.java</h1><pre class="source lang-java linenums">package com.softwareag.controlplane.agentaws.metrics.manager.impl;
+
+import com.softwareag.controlplane.agentaws.assets.manager.AssetsManager;
+import com.softwareag.controlplane.agentaws.assets.manager.impl.AssetsManagerImpl;
+import com.softwareag.controlplane.agentaws.metrics.client.AWSClientManager;
+import com.softwareag.controlplane.agentaws.metrics.constants.Constants;
+import com.softwareag.controlplane.agentaws.metrics.manager.MetricsManager;
+import com.softwareag.controlplane.agentaws.metrics.utils.CloudWatchUtil;
+import com.softwareag.controlplane.agentaws.metrics.utils.MetricsModelConverter;
+import com.softwareag.controlplane.agentaws.metrics.utils.Utility;
+import com.softwareag.controlplane.agentsdk.model.API;
+import com.softwareag.controlplane.agentsdk.model.APITransactionMetrics;
+import com.softwareag.controlplane.agentsdk.model.Metrics;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
+import software.amazon.awssdk.services.cloudwatch.model.Datapoint;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
+import software.amazon.awssdk.services.cloudwatch.model.GetMetricDataRequest;
+import software.amazon.awssdk.services.cloudwatch.model.GetMetricDataResponse;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDataResult;
+import software.amazon.awssdk.services.cloudwatch.model.Statistic;
+import software.amazon.awssdk.services.cloudwatch.model.GetMetricStatisticsRequest;
+import software.amazon.awssdk.services.cloudwatch.model.GetMetricStatisticsResponse;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Collections;
+import java.util.Comparator;
+
+import static com.softwareag.controlplane.agentaws.metrics.utils.MetricsModelConverter.updateMetricsMap;
+
+public final class MetricsManagerImpl implements MetricsManager {
+    private static MetricsManagerImpl cloudWatchManager;
+    private final String stage;
+    private final String getMetricsByData;
+    
+    private CloudWatchClient cloudWatchClient;
+    
+    private AssetsManager assetsManager;
+
+    private MetricDataResult countResults;
+    private MetricDataResult latencyResults;
+    private MetricDataResult integrationLatencyResults;
+    private MetricDataResult clientErrorResults;
+    private MetricDataResult serverErrorResults;
+
+<span class="fc" id="L49">    private MetricsManagerImpl(String region, String stage, String getMetricsByData) {</span>
+<span class="fc" id="L50">        this.stage = stage;</span>
+<span class="fc" id="L51">        this.getMetricsByData = getMetricsByData;</span>
+<span class="fc" id="L52">        this.cloudWatchClient = AWSClientManager.getInstance(region).cloudWatchClient();</span>
+<span class="fc" id="L53">        this.assetsManager = AssetsManagerImpl.getInstance(region);</span>
+<span class="fc" id="L54">    }</span>
+
+    /**
+     * Returns an instance of MetricsManagerImpl using the provided region, stage, and method. Initializing it if necessary.
+     *
+     * @param region The AWS region.
+     * @param stage The stage for which the agent is configured.
+     * @param getMetricsByData The method to retrieve data points from CloudWatch. It can either be 'data' or 'statistics'(default).
+     * @return An instance of MetricsManagerImpl with the provided configuration.
+     */
+    public static MetricsManagerImpl getInstance(String region, String stage, String getMetricsByData) {
+<span class="fc bfc" id="L65" title="All 2 branches covered.">        if(cloudWatchManager != null) {</span>
+<span class="fc" id="L66">            return cloudWatchManager;</span>
+        }
+<span class="fc" id="L68">        cloudWatchManager = new MetricsManagerImpl(region, stage, getMetricsByData);</span>
+<span class="fc" id="L69">        return cloudWatchManager;</span>
+    }
+
+    /**
+     * Retrieves a list of metrics associated with each sync interval between the specified time range.
+     *
+     * @param fromTimestamp The start time of the metrics range (inclusive).
+     * @param toTimestamp The end time of the metrics range (exclusive).
+     * @param interval The interval, in milliseconds, at which metrics are synchronized.
+     * @param bufferSeconds The assumed time, in seconds, that a metric takes to register to CloudWatch after it occurred.
+     * @return A list of Metrics objects representing the metrics associated with each sync interval between fromTimestamp (inclusive) and toTimestamp (exclusive).
+     */
+    @Override
+    public List&lt;Metrics&gt; getMetrics(long fromTimestamp, long toTimestamp, long interval, int bufferSeconds) {
+<span class="fc" id="L83">        List&lt;API&gt; apis = assetsManager.getRestAPIs(stage, false); // get APIs for the configured stage</span>
+
+<span class="fc" id="L85">        long bufferedFromTimestamp = Utility.reduceEpochTime(fromTimestamp, bufferSeconds);</span>
+<span class="fc" id="L86">        long bufferedToTimestamp = Utility.reduceEpochTime(toTimestamp, bufferSeconds);</span>
+
+<span class="fc" id="L88">        Instant startTime = Utility.alignTimestampsWithInterval(bufferedFromTimestamp, interval);</span>
+<span class="fc" id="L89">        Instant endTime = Utility.alignTimestampsWithInterval(bufferedToTimestamp, interval);</span>
+
+<span class="pc bpc" id="L91" title="1 of 2 branches missed.">        if(toTimestamp == 0) {</span>
+<span class="nc" id="L92">            endTime = Utility.alignTimestampsWithInterval(Instant.now(), interval);</span>
+        }
+<span class="fc bfc" id="L94" title="All 4 branches covered.">        if(fromTimestamp == 0 || startTime.isAfter(endTime.minusSeconds(interval))) {</span>
+<span class="fc" id="L95">            startTime = endTime.minusSeconds(interval);</span>
+        }
+
+        // Map with timestamp as a key and list of APITransactionMetrics for that key
+<span class="fc" id="L99">        Map&lt;Long, List&lt;APITransactionMetrics&gt;&gt; metricsMap = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L100">        List&lt;Metrics&gt; metricsList = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        if (getMetricsByData.equals(&quot;data&quot;)) {</span>
+<span class="fc bfc" id="L102" title="All 2 branches covered.">            for (API api : apis) {</span>
+<span class="fc" id="L103">                getByMetricData(api, metricsMap, startTime, endTime, (int) interval);</span>
+<span class="fc" id="L104">            }</span>
+        } else {
+<span class="fc bfc" id="L106" title="All 2 branches covered.">            for (API api : apis) {</span>
+<span class="fc" id="L107">                getByGetMetricStatistics(api, metricsMap, startTime, endTime, (int) interval);</span>
+<span class="fc" id="L108">            }</span>
+        }
+
+        // iterating through map and create Metrics object
+<span class="fc" id="L112">        metricsMap.forEach((key, value) -&gt; {</span>
+<span class="fc" id="L113">            Metrics metrics = MetricsModelConverter.createMetrics(key, value);</span>
+<span class="fc" id="L114">            metricsList.add(metrics);</span>
+<span class="fc" id="L115">        });</span>
+
+        //missing metric intervals should be sent with no transaction runtime metrics
+<span class="fc" id="L118">        long currentTimestamp = startTime.toEpochMilli();</span>
+<span class="fc" id="L119">        long endTimeStamp = endTime.toEpochMilli();</span>
+
+<span class="fc bfc" id="L121" title="All 2 branches covered.">        while(currentTimestamp &lt; endTimeStamp) {</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">            if(!metricsMap.containsKey(currentTimestamp)){</span>
+<span class="fc" id="L123">                metricsList.add(MetricsModelConverter.createNoTransanctionMetrics(currentTimestamp));</span>
+            }
+<span class="fc" id="L125">            currentTimestamp += (interval * 1000);</span>
+        }
+
+<span class="fc" id="L128">        Collections.sort(metricsList, Comparator.comparingLong(Metrics::getTimestamp));</span>
+<span class="fc" id="L129">        return metricsList;</span>
+    }
+
+    /**
+     * get metrics from cloudwatch using GetMetricData method
+     */
+    private void getByMetricData(API api, Map&lt;Long, List&lt;APITransactionMetrics&gt;&gt; metricsMap, Instant startTime,
+                                 Instant endTime, int interval) {
+
+
+<span class="fc" id="L139">        List&lt;Dimension&gt; dimensions = CloudWatchUtil.createDimensions(stage, api.getName());</span>
+<span class="fc" id="L140">        List&lt;MetricDataResult&gt; metricDataResults = getResultsByMetricData(startTime, endTime, dimensions, interval);</span>
+
+<span class="fc bfc" id="L142" title="All 2 branches covered.">        for (MetricDataResult metricDataResult : metricDataResults) {</span>
+<span class="fc" id="L143">            updateDataMetrics(metricDataResult);</span>
+<span class="fc" id="L144">        }</span>
+
+<span class="pc bpc" id="L146" title="1 of 2 branches missed.">        if(countResults != null) {</span>
+<span class="fc bfc" id="L147" title="All 2 branches covered.">            for (int i = 0; i &lt; countResults.values().size(); i++) {</span>
+<span class="fc" id="L148">                Double count = countResults.values().get(i);</span>
+<span class="fc" id="L149">                Double latency = getMetricValue(latencyResults, i);</span>
+<span class="fc" id="L150">                Double integrationLatency = getMetricValue(integrationLatencyResults, i);</span>
+<span class="fc" id="L151">                Double averageLatency = Math.max(latency - integrationLatency, 0);</span>
+<span class="fc" id="L152">                Double clientError = getMetricValue(clientErrorResults, i);</span>
+<span class="fc" id="L153">                Double serverError = getMetricValue(serverErrorResults, i);</span>
+<span class="fc" id="L154">                APITransactionMetrics apiTransactionMetrics = MetricsModelConverter.createAPITransactionMetrics(api, count, latency, averageLatency, integrationLatency, clientError, serverError);</span>
+<span class="fc" id="L155">                Instant timeStamp = countResults.timestamps().get(i);</span>
+<span class="fc" id="L156">                updateMetricsMap(metricsMap, apiTransactionMetrics, timeStamp);</span>
+            }
+        }
+<span class="fc" id="L159">    }</span>
+
+    /**
+     * get metrics from cloudwatch using GetMetricData method
+     *
+     * @return List of MetricDataResult, each MetricDataResult corresponding to one metric
+     */
+    private List&lt;MetricDataResult&gt; getResultsByMetricData(Instant startTime, Instant endTime, List&lt;Dimension&gt; dimensions,
+                                                          int interval) {
+
+<span class="fc" id="L169">        GetMetricDataRequest getMetReq = GetMetricDataRequest.builder()</span>
+<span class="fc" id="L170">                .startTime(startTime)</span>
+<span class="fc" id="L171">                .endTime(endTime)</span>
+<span class="fc" id="L172">                .metricDataQueries(CloudWatchUtil.createMetricDataQueries(dimensions, interval))</span>
+<span class="fc" id="L173">                .build();</span>
+<span class="fc" id="L174">        GetMetricDataResponse response = cloudWatchClient.getMetricData(getMetReq);</span>
+<span class="fc" id="L175">        return response.metricDataResults();</span>
+    }
+
+    private void updateDataMetrics(MetricDataResult metricDataResult) {
+<span class="pc bpc" id="L179" title="1 of 2 branches missed.">        if (metricDataResult == null)</span>
+<span class="nc" id="L180">            return;</span>
+
+<span class="fc bfc" id="L182" title="All 2 branches covered.">        if (Constants.AWS_METRIC_COUNT_ID.equals(metricDataResult.id())) {</span>
+<span class="fc" id="L183">            countResults = metricDataResult;</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">        } else if (Constants.AWS_METRIC_LATENCY_ID.equals(metricDataResult.id())) {</span>
+<span class="fc" id="L185">            latencyResults = metricDataResult;</span>
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        } else if (Constants.AWS_METRIC_INTEGRATION_LATENCY_ID.equals(metricDataResult.id())) {</span>
+<span class="fc" id="L187">            integrationLatencyResults = metricDataResult;</span>
+<span class="fc bfc" id="L188" title="All 2 branches covered.">        } else if (Constants.AWS_METRIC_CLIENT_ERROR_ID.equals(metricDataResult.id())) {</span>
+<span class="fc" id="L189">            clientErrorResults = metricDataResult;</span>
+        } else {
+<span class="fc" id="L191">            serverErrorResults = metricDataResult;</span>
+        }
+<span class="fc" id="L193">    }</span>
+
+    private Double getMetricValue(MetricDataResult metricDataResult, int index) {
+<span class="pc bpc" id="L196" title="2 of 4 branches missed.">        return metricDataResult != null &amp;&amp; metricDataResult.values().size() &gt; index ? metricDataResult.values().get(index) : 0;</span>
+    }
+
+    /**
+     * get metrics from cloudwatch using GetMetricStatistics method
+     */
+    private void getByGetMetricStatistics(API api, Map&lt;Long, List&lt;APITransactionMetrics&gt;&gt; metricsMap,
+                                          Instant startTime, Instant endTime, int interval) {
+<span class="fc" id="L204">        List&lt;Dimension&gt; dimensions = CloudWatchUtil.createDimensions(stage, api.getName());</span>
+<span class="fc" id="L205">        List&lt;Datapoint&gt; countDataPoints = getCountMetrics(startTime, endTime, dimensions, interval);</span>
+<span class="fc" id="L206">        List&lt;Datapoint&gt; latencyDataPoints = getLatencyMetrics(startTime, endTime, dimensions, interval);</span>
+<span class="fc" id="L207">        List&lt;Datapoint&gt; integrationLatencyPoints = getIntegrationLatencyMetrics(startTime, endTime, dimensions, interval);</span>
+<span class="fc" id="L208">        List&lt;Datapoint&gt; clientErrorDataPoints = get4XXErrorCount(startTime, endTime, dimensions, interval);</span>
+<span class="fc" id="L209">        List&lt;Datapoint&gt; serverErrorDataPoints = get5XXErrorCount(startTime, endTime, dimensions, interval);</span>
+
+<span class="fc bfc" id="L211" title="All 2 branches covered.">        for (int i = 0; i &lt; countDataPoints.size(); i++) {</span>
+<span class="fc" id="L212">            Double count = countDataPoints.get(i).sum();</span>
+<span class="pc bpc" id="L213" title="1 of 2 branches missed.">            Double latency = (latencyDataPoints.size() &gt; i) ? latencyDataPoints.get(i).average() : 0;</span>
+<span class="pc bpc" id="L214" title="1 of 2 branches missed.">            Double integrationLatency = (integrationLatencyPoints.size() &gt; i) ? integrationLatencyPoints.get(i).average() : 0;</span>
+<span class="pc bpc" id="L215" title="1 of 2 branches missed.">            Double averageLatency = latency - integrationLatency &gt; 0 ? latency - integrationLatency : 0;</span>
+<span class="pc bpc" id="L216" title="1 of 2 branches missed.">            Double clientError = (clientErrorDataPoints.size() &gt; i) ? clientErrorDataPoints.get(i).sum() : 0;</span>
+<span class="pc bpc" id="L217" title="1 of 2 branches missed.">            Double serverError = (serverErrorDataPoints.size() &gt; i) ? serverErrorDataPoints.get(i).sum() : 0;</span>
+<span class="fc" id="L218">            APITransactionMetrics apiTransactionMetrics = MetricsModelConverter.createAPITransactionMetrics(api</span>
+                    , count, latency, averageLatency, integrationLatency, clientError, serverError);
+<span class="fc" id="L220">            Instant timeStamp = countDataPoints.get(i).timestamp();</span>
+<span class="fc" id="L221">            updateMetricsMap(metricsMap, apiTransactionMetrics, timeStamp);</span>
+        }
+<span class="fc" id="L223">    }</span>
+
+
+    /**
+     * get Count Metrics by GetMetricStatistics method
+     */
+    private List&lt;Datapoint&gt; getCountMetrics(Instant startTime, Instant endTime, List&lt;Dimension&gt; dimensions, int interval) {
+<span class="fc" id="L230">        return getResultsByMetricStatistics(startTime, endTime, dimensions, interval, Constants.AWS_METRIC_COUNT, Statistic.SUM);</span>
+    }
+
+    /**
+     * get Latency Metrics by GetMetricStatistics method
+     */
+    private List&lt;Datapoint&gt; getLatencyMetrics(Instant startTime, Instant endTime, List&lt;Dimension&gt; dimensions, int interval) {
+<span class="fc" id="L237">        return getResultsByMetricStatistics(startTime, endTime, dimensions, interval, Constants.AWS_METRIC_LATENCY, Statistic.AVERAGE);</span>
+    }
+
+    /**
+     * get IntegrationLatency Metrics by GetMetricStatistics method
+     */
+    private List&lt;Datapoint&gt; getIntegrationLatencyMetrics(Instant startTime, Instant endTime, List&lt;Dimension&gt; dimensions,
+                                                         int interval) {
+<span class="fc" id="L245">        return getResultsByMetricStatistics(startTime, endTime, dimensions, interval, Constants.AWS_METRIC_INTEGRATION_LATENCY,</span>
+                Statistic.AVERAGE);
+    }
+
+    /**
+     * get 4xx Metrics by GetMetricStatistics method
+     */
+    private List&lt;Datapoint&gt; get4XXErrorCount(Instant startTime, Instant endTime, List&lt;Dimension&gt; dimensions, int interval) {
+<span class="fc" id="L253">        return getResultsByMetricStatistics(startTime, endTime, dimensions, interval, Constants.AWS_METRIC_CLIENT_ERROR</span>
+                , Statistic.SUM);
+    }
+
+    /**
+     * get 5xx Metrics by GetMetricStatistics method
+     */
+    private List&lt;Datapoint&gt; get5XXErrorCount(Instant startTime, Instant endTime, List&lt;Dimension&gt; dimensions, int interval) {
+
+<span class="fc" id="L262">        return getResultsByMetricStatistics(startTime, endTime, dimensions, interval, Constants.AWS_METRIC_SERVER_ERROR</span>
+                , Statistic.SUM);
+    }
+
+
+    /**
+     * get datapoints for a metric by GetMetricStatistics mthod
+     *
+     * @return list of datapoint for a single metric
+     */
+    private List&lt;Datapoint&gt; getResultsByMetricStatistics(Instant startTime, Instant endTime, List&lt;Dimension&gt; dimensions,
+                                                         int interval, String metricName, Statistic statistic) {
+<span class="fc" id="L274">        GetMetricStatisticsRequest request = GetMetricStatisticsRequest.builder()</span>
+<span class="fc" id="L275">                .startTime(startTime)</span>
+<span class="fc" id="L276">                .endTime(endTime)</span>
+<span class="fc" id="L277">                .metricName(metricName)</span>
+<span class="fc" id="L278">                .namespace(Constants.CLOUDWATCH_AWS_NAMESPACE)</span>
+<span class="fc" id="L279">                .dimensions(dimensions)</span>
+<span class="fc" id="L280">                .period(interval)</span>
+<span class="fc" id="L281">                .statistics(statistic)</span>
+<span class="fc" id="L282">                .build();</span>
+
+<span class="fc" id="L284">        GetMetricStatisticsResponse response = cloudWatchClient.getMetricStatistics(request);</span>
+<span class="fc" id="L285">        return response.datapoints();</span>
+    }
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

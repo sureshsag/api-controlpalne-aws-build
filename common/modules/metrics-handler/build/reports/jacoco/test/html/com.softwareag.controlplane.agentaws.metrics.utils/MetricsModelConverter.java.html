@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MetricsModelConverter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">metrics-handler</a> &gt; <a href="index.source.html" class="el_package">com.softwareag.controlplane.agentaws.metrics.utils</a> &gt; <span class="el_source">MetricsModelConverter.java</span></div><h1>MetricsModelConverter.java</h1><pre class="source lang-java linenums">package com.softwareag.controlplane.agentaws.metrics.utils;
+
+import com.softwareag.controlplane.agentaws.metrics.constants.Constants;
+import com.softwareag.controlplane.agentsdk.model.API;
+import com.softwareag.controlplane.agentsdk.model.APIMetrics;
+import com.softwareag.controlplane.agentsdk.model.APITransactionMetrics;
+import com.softwareag.controlplane.agentsdk.model.Metrics;
+import com.softwareag.controlplane.agentsdk.model.RuntimeTransactionMetrics;
+
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Model converter to convert from Cloudwatch results to Agent SDK Metrics model
+ */
+public final class MetricsModelConverter {
+    private MetricsModelConverter() {
+
+    }
+
+    /**
+     * Creates an instance of APITransactionMetrics.
+     *
+     * @param api The API associated with the metrics.
+     * @param transactionCount The total count of transactions.
+     * @param latency The average overall latency of transactions(in AWS API Gateway).
+     * @param averageLatency The average AWS API gateway(only gateway overhead) latency.
+     * @param integrationLatency The integration latency of transactions(in AWS API Gateway).
+     * @param clientError The count of client errors.
+     * @param serverError The count of server errors.
+     * @return An instance of APITransactionMetrics containing the provided metrics.
+     */
+    public static APITransactionMetrics createAPITransactionMetrics(API api, Double transactionCount, Double latency,
+                                                                    Double averageLatency, Double integrationLatency,
+                                                                    Double clientError, Double serverError) {
+
+<span class="fc" id="L41">        APIMetrics apiMetrics = new APIMetrics.Builder(transactionCount.longValue())</span>
+<span class="fc" id="L42">                .averageLatency(averageLatency.floatValue())</span>
+<span class="fc" id="L43">                .averageResponseTime(latency.floatValue())</span>
+<span class="fc" id="L44">                .averageBackendResponseTime(integrationLatency.floatValue()).build();</span>
+<span class="fc" id="L45">        APITransactionMetrics apiTransactionMetrics = new APITransactionMetrics.Builder(apiMetrics, api.getId(),</span>
+<span class="fc" id="L46">                api.getName(), api.getVersion()).build();</span>
+<span class="fc" id="L47">        Map&lt;String, APIMetrics&gt; metricsBysStatusCode = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L48">        metricsBysStatusCode.put(Constants.CP_METRIC_CLIENT_ERROR, getAPIMetricsForStatusCode(clientError.longValue()));</span>
+<span class="fc" id="L49">        metricsBysStatusCode.put(Constants.CP_METRIC_SERVER_ERROR, getAPIMetricsForStatusCode(serverError.longValue()));</span>
+<span class="fc" id="L50">        apiTransactionMetrics.setMetricsByStatusCode(metricsBysStatusCode);</span>
+<span class="fc" id="L51">        return apiTransactionMetrics;</span>
+    }
+
+    /**
+     * Creates an instance of Metrics based on the provided timestamp and list of API transaction metrics.
+     *
+     * @param timestamp The timestamp associated with the metrics.
+     * @param apiTransactionMetricsList The list of API transaction metrics.
+     * @return An instance of Metrics containing the provided timestamp and API transaction metrics.
+     */
+    public static Metrics createMetrics(long timestamp, List&lt;APITransactionMetrics&gt; apiTransactionMetricsList) {
+<span class="fc" id="L62">        return new Metrics.Builder()</span>
+<span class="fc" id="L63">                .apiTransactionMetricsList(apiTransactionMetricsList)</span>
+<span class="fc" id="L64">                .runtimeTransactionMetrics(createRuntimeMetrics(apiTransactionMetricsList))</span>
+<span class="fc" id="L65">                .timestamp(timestamp).build();</span>
+    }
+
+    /**
+     * Creates an instance of Metrics representing a point in time with no transactions.
+     *
+     * @param timestamp The timestamp associated with the metrics.
+     * @return An instance of Metrics with no transactions and the provided timestamp.
+     */
+    public static Metrics createNoTransanctionMetrics(long timestamp) {
+<span class="fc" id="L75">        List&lt;APITransactionMetrics&gt; apiTransactionMetricsList = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L76">        APIMetrics apiMetrics = new APIMetrics.Builder(0L)</span>
+<span class="fc" id="L77">                .averageBackendResponseTime((float) 0)</span>
+<span class="fc" id="L78">                .averageLatency((float) 0)</span>
+<span class="fc" id="L79">                .averageResponseTime((float) 0)</span>
+<span class="fc" id="L80">                .build();</span>
+
+<span class="fc" id="L82">        return new Metrics.Builder()</span>
+<span class="fc" id="L83">                .apiTransactionMetricsList(apiTransactionMetricsList)</span>
+<span class="fc" id="L84">                .runtimeTransactionMetrics(new RuntimeTransactionMetrics.Builder(apiMetrics).build())</span>
+<span class="fc" id="L85">                .timestamp(timestamp).build();</span>
+    }
+
+    /**
+     * Calculates the runtime transaction metrics based on the provided list of API transaction metrics.
+     * The runtime transaction count is the sum of all APIs' transaction counts in the list.
+     * The runtime latency is the average of all APIs' latencies in the list.
+     * The runtime average backend response is the average backend response of all APIs in the list.
+     * The runtime response time is the average response time of all APIs in the list.
+     * The runtime client error is the sum of all the APIs' client errors in the list.
+     * The runtime server error is the sum of all the APIs' server errors in the list.
+     *
+     * @param apiTransactionMetricsList List of all API transaction metrics in that runtime.
+     * @return RuntimeTransactionMetrics for the given list of API transaction metrics.
+     */
+    public static RuntimeTransactionMetrics createRuntimeMetrics(List&lt;APITransactionMetrics&gt; apiTransactionMetricsList) {
+
+<span class="fc" id="L102">        long totalTransactionCount = 0;</span>
+<span class="fc" id="L103">        float totalLatencyOfAllApis = 0;</span>
+<span class="fc" id="L104">        float totalBackendResponseTimeOfAllApis = 0;</span>
+<span class="fc" id="L105">        float totalResponseTimeOfAllApis = 0;</span>
+<span class="fc" id="L106">        long clientError = 0;</span>
+<span class="fc" id="L107">        long serverError = 0;</span>
+
+<span class="fc bfc" id="L109" title="All 2 branches covered.">        for (APITransactionMetrics apiTransactionMetrics : apiTransactionMetricsList) {</span>
+<span class="fc" id="L110">            long currentApiTransactionCount = apiTransactionMetrics.getApiMetrics().getTransactionCount();</span>
+<span class="fc" id="L111">            totalTransactionCount += currentApiTransactionCount;</span>
+<span class="fc" id="L112">            totalLatencyOfAllApis += apiTransactionMetrics.getApiMetrics().getAverageLatency() * currentApiTransactionCount;</span>
+<span class="fc" id="L113">            totalBackendResponseTimeOfAllApis += apiTransactionMetrics.getApiMetrics().getAverageBackendResponseTime() * currentApiTransactionCount;</span>
+<span class="fc" id="L114">            totalResponseTimeOfAllApis += apiTransactionMetrics.getApiMetrics().getAverageResponseTime() * currentApiTransactionCount;</span>
+<span class="fc" id="L115">            clientError += apiTransactionMetrics.getMetricsByStatusCode().get(Constants.CP_METRIC_CLIENT_ERROR).getTransactionCount();</span>
+<span class="fc" id="L116">            serverError += apiTransactionMetrics.getMetricsByStatusCode().get(Constants.CP_METRIC_SERVER_ERROR).getTransactionCount();</span>
+<span class="fc" id="L117">        }</span>
+
+<span class="fc" id="L119">        APIMetrics runtimeMetrics = new APIMetrics.Builder(totalTransactionCount)</span>
+<span class="pc bpc" id="L120" title="2 of 4 branches missed.">                .averageLatency(totalLatencyOfAllApis != 0 &amp;&amp; totalTransactionCount != 0 ? totalLatencyOfAllApis / totalTransactionCount : 0)</span>
+<span class="pc bpc" id="L121" title="2 of 4 branches missed.">                .averageBackendResponseTime(totalBackendResponseTimeOfAllApis != 0 &amp;&amp; totalTransactionCount != 0 ? totalBackendResponseTimeOfAllApis / totalTransactionCount : 0)</span>
+<span class="pc bpc" id="L122" title="2 of 4 branches missed.">                .averageResponseTime(totalResponseTimeOfAllApis != 0 &amp;&amp; totalTransactionCount != 0 ? totalResponseTimeOfAllApis / totalTransactionCount : 0).build();</span>
+
+<span class="fc" id="L124">        RuntimeTransactionMetrics runtimeTransactionMetrics = new RuntimeTransactionMetrics.Builder(runtimeMetrics).build();</span>
+<span class="fc" id="L125">        Map&lt;String, APIMetrics&gt; metricsByStatusCode = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L126">        metricsByStatusCode.put(Constants.CP_METRIC_CLIENT_ERROR, getAPIMetricsForStatusCode(clientError));</span>
+<span class="fc" id="L127">        metricsByStatusCode.put(Constants.CP_METRIC_SERVER_ERROR, getAPIMetricsForStatusCode(serverError));</span>
+<span class="fc" id="L128">        runtimeTransactionMetrics.setMetricsByStatusCode(metricsByStatusCode);</span>
+
+<span class="fc" id="L130">        return runtimeTransactionMetrics;</span>
+
+    }
+
+    /**
+     * Creates an instance of APIMetrics with the count metric alone for a specific status code.
+     *
+     * @param count The count metric for the status code.
+     * @return An instance of APIMetrics with the provided count metric for the status code.
+     */
+    private static APIMetrics getAPIMetricsForStatusCode(Long count) {
+<span class="fc" id="L141">        return new APIMetrics.Builder(count).build();</span>
+    }
+
+    /**
+     * Updates a map of API metrics with the provided API transaction metrics for a specific timestamp.
+     * If the map does not contain an entry for the given timestamp, a new entry is created.
+     *
+     * @param apiMetricsMap The map containing API metrics, keyed by timestamp.
+     * @param apiTransactionMetrics The API transaction metrics to be added to the map.
+     * @param timeStamp The timestamp associated with the API transaction metrics.
+     */
+    public static void updateMetricsMap(Map&lt;Long, List&lt;APITransactionMetrics&gt;&gt; apiMetricsMap,
+                                        APITransactionMetrics apiTransactionMetrics, Instant timeStamp) {
+<span class="fc" id="L154">        long timestamp = timeStamp.toEpochMilli();</span>
+<span class="fc" id="L155">        apiMetricsMap.computeIfAbsent(timestamp, k -&gt; new ArrayList&lt;&gt;());</span>
+<span class="fc" id="L156">        apiMetricsMap.get(timestamp).add(apiTransactionMetrics);</span>
+<span class="fc" id="L157">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

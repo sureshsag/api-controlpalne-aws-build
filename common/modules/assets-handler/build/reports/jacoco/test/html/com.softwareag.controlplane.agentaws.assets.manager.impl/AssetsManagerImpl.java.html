@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AssetsManagerImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">assets-handler</a> &gt; <a href="index.source.html" class="el_package">com.softwareag.controlplane.agentaws.assets.manager.impl</a> &gt; <span class="el_source">AssetsManagerImpl.java</span></div><h1>AssetsManagerImpl.java</h1><pre class="source lang-java linenums">package com.softwareag.controlplane.agentaws.assets.manager.impl;
+
+import com.softwareag.controlplane.agentaws.assets.client.AWSClientManager;
+import com.softwareag.controlplane.agentaws.assets.constants.Constants;
+import com.softwareag.controlplane.agentaws.assets.manager.AssetsManager;
+import com.softwareag.controlplane.agentaws.assets.manager.CloudTrailManager;
+import com.softwareag.controlplane.agentaws.assets.utils.APIModelConverter;
+import com.softwareag.controlplane.agentsdk.model.API;
+import com.softwareag.controlplane.agentsdk.model.APISyncAction;
+import com.softwareag.controlplane.agentsdk.model.Asset;
+import com.softwareag.controlplane.agentsdk.model.AssetSyncAction;
+import com.softwareag.controlplane.agentsdk.model.AssetType;
+import org.json.JSONObject;
+import software.amazon.awssdk.services.apigateway.ApiGatewayClient;
+import software.amazon.awssdk.services.apigateway.model.Deployment;
+import software.amazon.awssdk.services.apigateway.model.GetDeploymentsRequest;
+import software.amazon.awssdk.services.apigateway.model.GetDeploymentsResponse;
+import software.amazon.awssdk.services.apigateway.model.GetExportRequest;
+import software.amazon.awssdk.services.apigateway.model.GetExportResponse;
+import software.amazon.awssdk.services.apigateway.model.GetRestApiRequest;
+import software.amazon.awssdk.services.apigateway.model.GetRestApiResponse;
+import software.amazon.awssdk.services.apigateway.model.GetRestApisResponse;
+import software.amazon.awssdk.services.apigateway.model.GetStagesRequest;
+import software.amazon.awssdk.services.apigateway.model.GetStagesResponse;
+import software.amazon.awssdk.services.apigateway.model.RestApi;
+import software.amazon.awssdk.services.apigateway.model.Stage;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+
+public final class AssetsManagerImpl implements AssetsManager {
+
+    private static AssetsManagerImpl assetsManager;
+    ApiGatewayClient apiGatewayClient;
+    CloudTrailManager cloudTrailManager;
+
+<span class="fc" id="L39">    private AssetsManagerImpl(String region) {</span>
+<span class="fc" id="L40">        AWSClientManager awsClientManager = AWSClientManager.getInstance(region);</span>
+<span class="fc" id="L41">        this.cloudTrailManager = CloudTrailManagerImpl.getInstance(awsClientManager.cloudTrailClient());</span>
+<span class="fc" id="L42">        this.apiGatewayClient = awsClientManager.apiGatewayClient();</span>
+<span class="fc" id="L43">    }</span>
+
+    /**
+     * Returns the singleton instance of the AssetsManagerImpl class, initializing it if necessary.
+     *
+     * @param region    The AWS region.
+     * @return The singleton instance of AssetsManagerImpl.
+     */
+    public static AssetsManagerImpl getInstance(String region) {
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        if(assetsManager != null) {</span>
+<span class="fc" id="L53">            return assetsManager;</span>
+        }
+<span class="fc" id="L55">        assetsManager = new AssetsManagerImpl(region);</span>
+<span class="fc" id="L56">        return assetsManager;</span>
+    }
+
+    /**
+     * Retrieves list of APIs in the provided stage and sets the respective owner for the APIs
+     * @param stage The stage for which the agent is configured.
+     * @return The list of APIs belonging to the stage
+     */
+    @Override
+    public List&lt;API&gt; getRestAPIs(String stage, boolean isOwnerRequired) {
+<span class="fc" id="L66">        GetRestApisResponse restApisResponse = apiGatewayClient.getRestApis();</span>
+<span class="fc" id="L67">        List&lt;RestApi&gt; restApis = restApisResponse.items();</span>
+<span class="fc" id="L68">        List&lt;API&gt; apis = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L69">        Map&lt;String, String&gt; restApisOwner = null;</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if(isOwnerRequired)</span>
+<span class="fc" id="L71">            restApisOwner = cloudTrailManager.getOwnerForRestApis();</span>
+
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        for (RestApi restApi : restApis) {</span>
+<span class="fc" id="L74">            GetStagesRequest stagesRequest = GetStagesRequest.builder().restApiId(restApi.id()).build();</span>
+<span class="fc" id="L75">            GetStagesResponse stagesResponse = apiGatewayClient.getStages(stagesRequest);</span>
+<span class="fc" id="L76">            List&lt;Stage&gt; stages = stagesResponse.item();</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">            API api = getAPIFromStage(stage, stages, restApi.id(), restApi.tags(), restApisOwner != null ? restApisOwner.get(restApi.id()) : null);</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">            if (api != null) {</span>
+<span class="fc" id="L79">                apis.add(api);</span>
+            }
+<span class="fc" id="L81">        }</span>
+<span class="fc" id="L82">        return apis;</span>
+
+    }
+
+    /**
+     * Retrieves a list of API sync actions for APIs modified in the provided stage after the asset sync time.
+     *
+     * @param stage          The stage for which the agent is configured.
+     * @param assetSyncTime  The last time when assets were synced.
+     * @param bufferTime     The time it takes for an event to register to AWS CloudTrail after it occurred.
+     * @return A list of AssetSyncAction objects for APIs modified after the assetSyncTime.
+     */
+    @Override
+    public List&lt;AssetSyncAction&lt;Asset&gt;&gt; getModifiedRestAPIs(String stage, Long assetSyncTime, int bufferTime) {
+<span class="fc" id="L96">        List&lt;AssetSyncAction&lt;Asset&gt;&gt; assetSyncActions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L97">        Map&lt;String, Map&lt;String, String&gt;&gt; modifiedApis = cloudTrailManager.getModifiedAPIs(assetSyncTime, bufferTime);</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        for (Map.Entry&lt;String, Map&lt;String, String&gt;&gt; entry: modifiedApis.entrySet()) {</span>
+<span class="fc" id="L99">            String operation = entry.getKey();</span>
+<span class="fc" id="L100">            Map&lt;String, String&gt; apis = entry.getValue();</span>
+<span class="fc" id="L101">            addAssetSyncActions(apis, operation, stage, assetSyncTime, assetSyncActions);</span>
+<span class="fc" id="L102">        }</span>
+<span class="fc" id="L103">        return assetSyncActions;</span>
+    }
+
+    private void addAssetSyncActions(Map&lt;String, String&gt; apis, String operation, String stage, Long assetSyncTime, List&lt;AssetSyncAction&lt;Asset&gt;&gt; assetSyncActions) {
+<span class="fc bfc" id="L107" title="All 2 branches covered.">        for (Map.Entry&lt;String, String&gt; entry : apis.entrySet()) {</span>
+<span class="fc" id="L108">            String restApiID = entry.getKey();</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">            if (Constants.DELETE.equals(operation)) {</span>
+<span class="fc" id="L110">                assetSyncActions.addAll(getDeleteSyncActions(restApiID, assetSyncTime, null));</span>
+            }
+            else {
+<span class="fc" id="L113">                GetRestApiRequest restApiRequest = GetRestApiRequest.builder().restApiId(restApiID).build();</span>
+<span class="fc" id="L114">                GetRestApiResponse restApiResponse = apiGatewayClient.getRestApi(restApiRequest);</span>
+<span class="fc" id="L115">                GetStagesRequest stagesRequest = GetStagesRequest.builder().restApiId(restApiID).build();</span>
+<span class="fc" id="L116">                GetStagesResponse stagesResponse = apiGatewayClient.getStages(stagesRequest);</span>
+<span class="fc" id="L117">                List&lt;Stage&gt; stages = stagesResponse.item();</span>
+<span class="fc" id="L118">                API api = getAPIFromStage(stage, stages, restApiID, restApiResponse.tags(), apis.get(restApiID));</span>
+<span class="pc bpc" id="L119" title="1 of 2 branches missed.">                if (api != null) {</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">                    if(Constants.CREATE.equals(operation)) {</span>
+                        //delete previous deployment
+<span class="fc" id="L122">                        assetSyncActions.addAll(getDeleteSyncActions(restApiID, assetSyncTime, api.getVersion()));</span>
+                    }
+<span class="fc" id="L124">                    assetSyncActions.add((AssetSyncAction) new APISyncAction(AssetType.API,</span>
+<span class="fc" id="L125">                            AssetSyncAction.SyncType.valueOf(operation), api, assetSyncTime));</span>
+                }
+            }
+<span class="fc" id="L128">        }</span>
+<span class="fc" id="L129">    }</span>
+
+    /**
+     * Delete all the deployments(versions) of the provided REST API, except the active version, and set the provided assets sync time for these delete asset sync actions.
+     * @param restApiId The rest api id for which all the deployments should be deleted.
+     * @param assetSyncTime The sync time to be set for the delete asset sync actions.
+     * @return A list of AssetSyncAction objects with delete sync type, for APIs modified after the assetSyncTime.
+     */
+    private List&lt;AssetSyncAction&lt;Asset&gt;&gt; getDeleteSyncActions(String restApiId, Long assetSyncTime, String activeVersion) {
+<span class="fc" id="L138">        List&lt;AssetSyncAction&lt;Asset&gt;&gt; deleteStatusSyncActions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L139">        GetDeploymentsRequest deploymentsRequest = GetDeploymentsRequest.builder().restApiId(restApiId).build();</span>
+<span class="fc" id="L140">        GetDeploymentsResponse deploymentResponse = apiGatewayClient.getDeployments(deploymentsRequest);</span>
+
+<span class="fc bfc" id="L142" title="All 2 branches covered.">        for(Deployment d : deploymentResponse.items()) {</span>
+<span class="fc bfc" id="L143" title="All 2 branches covered.">            if(d.id().equals(activeVersion)) {</span>
+<span class="fc" id="L144">                continue;</span>
+            }
+<span class="fc" id="L146">            String apiId = restApiId + &quot;-&quot; + d.id();</span>
+<span class="fc" id="L147">            deleteStatusSyncActions.add((AssetSyncAction) new APISyncAction(AssetType.API,</span>
+<span class="fc" id="L148">                    AssetSyncAction.SyncType.valueOf(Constants.DELETE), apiId, assetSyncTime));</span>
+<span class="fc" id="L149">        }</span>
+
+<span class="fc" id="L151">        return deleteStatusSyncActions;</span>
+    }
+
+
+    /**
+     * Retrieves API if it is present in the provided stage
+     *
+     * @param stage   stage for which agent is configured
+     * @param stages  list of stages present for an API
+     * @param apiId   apiId
+     * @param apiTags Tags at Parent Rest API level
+     * @param owner   owner of the rest API fetched from cloudtrail
+     * @return Agent SDK API model if the API belongs to configured stage
+     */
+    private API getAPIFromStage(String stage, List&lt;Stage&gt; stages, String apiId, Map&lt;String, String&gt; apiTags,
+                                String owner) {
+<span class="fc" id="L167">        API api = null;</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">        for (Stage stageOfApi : stages) {</span>
+<span class="fc bfc" id="L169" title="All 2 branches covered.">            if (stage.equals(stageOfApi.stageName())) {</span>
+<span class="fc" id="L170">                GetExportRequest exportRequest = GetExportRequest.builder()</span>
+<span class="fc" id="L171">                        .restApiId(apiId)</span>
+<span class="fc" id="L172">                        .stageName(stage)</span>
+<span class="fc" id="L173">                        .exportType(Constants.REST_API_OPEN_API_3_0)</span>
+<span class="fc" id="L174">                        .build();</span>
+<span class="fc" id="L175">                GetExportResponse exportResponse = apiGatewayClient.getExport(exportRequest);</span>
+<span class="fc" id="L176">                JSONObject openAPISpecJson = new JSONObject(exportResponse.body().asUtf8String());</span>
+<span class="fc" id="L177">                GetDeploymentsRequest deploymentsRequest = GetDeploymentsRequest.builder().restApiId(apiId).build();</span>
+<span class="fc" id="L178">                GetDeploymentsResponse deploymentResponse = apiGatewayClient.getDeployments(deploymentsRequest);</span>
+
+<span class="fc" id="L180">                Deployment deployment = null;</span>
+<span class="pc bpc" id="L181" title="1 of 2 branches missed.">                for(Deployment d : deploymentResponse.items()) {</span>
+<span class="fc bfc" id="L182" title="All 2 branches covered.">                    if(stageOfApi.deploymentId().equals(d.id())) {</span>
+<span class="fc" id="L183">                        deployment = d;</span>
+<span class="fc" id="L184">                        break;</span>
+                    }
+<span class="fc" id="L186">                }</span>
+<span class="fc" id="L187">                api = APIModelConverter.convertToAPIModel(apiId, apiTags, stageOfApi, openAPISpecJson, owner, deployment);</span>
+<span class="fc" id="L188">                break;</span>
+            }
+<span class="fc" id="L190">        }</span>
+<span class="fc" id="L191">        return api;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>
